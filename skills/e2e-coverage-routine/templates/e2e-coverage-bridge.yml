@@ -1,0 +1,57 @@
+name: E2E coverage PR bridge
+
+# The e2e-coverage routine can only push to `claude/` branches and has no GitHub
+# API access, so it cannot open a PR itself. This workflow fires when the routine
+# pushes its coverage branch and opens (or reuses) a PR into the default branch,
+# using the tip commit's body as the PR description.
+
+on:
+  push:
+    branches:
+      - 'claude/e2e-coverage-*'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: e2e-coverage-bridge-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  open-pr:
+    if: ${{ github.event.deleted != true }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Open or reuse a PR for the routine's new E2E tests
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          base=$(gh repo view "$REPO" --json defaultBranchRef --jq .defaultBranchRef.name)
+
+          # Reuse an existing open PR for this branch if there is one.
+          existing=$(gh pr list --repo "$REPO" --head "$BRANCH" --state open \
+            --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            echo "PR #$existing already open for $BRANCH."
+            exit 0
+          fi
+
+          # Use the tip commit body as the PR description (the routine writes its
+          # report there); fall back to a default if it's empty.
+          body=$(git log -1 --format=%b "origin/$BRANCH")
+          if [ -z "$body" ]; then
+            body="Automated E2E coverage pass — new end-to-end tests proposed by the e2e-coverage routine. The \`e2e\` check will run them on this PR; review and merge if green."
+          fi
+
+          gh pr create --repo "$REPO" --base "$base" --head "$BRANCH" \
+            --title "test(e2e): routine-proposed edge cases (${BRANCH#claude/})" \
+            --body "$body"

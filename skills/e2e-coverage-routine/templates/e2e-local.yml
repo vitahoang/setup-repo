@@ -1,0 +1,99 @@
+name: E2E (local stack)
+
+# Runs the Playwright E2E suite against a full local stack in CI — a Dockerized
+# local Supabase (Postgres + Auth + Mailpit) plus the dev server (and any test
+# doubles the Playwright config boots). Mirrors `pnpm test:e2e` locally.
+#
+# ADAPT THIS FILE to the target project. The stack-specific bits are marked
+# `# ADAPT:` below — package manager, migrate/seed commands, and the dummy
+# env() placeholders for whatever providers your supabase/config.toml enables.
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NODE_ENV: test
+      # ADAPT: any plain app env the dev server needs.
+      SUPER_ADMIN_EMAIL: admin@e2e.local
+      # Keep `localhost` (not 127.0.0.1) so the app's session-cookie origin
+      # matches the dev server the tests drive.
+      NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+      DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
+      # ADAPT: dummy values so `supabase start` can resolve the env() references
+      # in supabase/config.toml. Add one per env(NAME) under an `enabled = true`
+      # section. Not real creds — OAuth E2E tests intercept the authorize request.
+      SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: dummy
+      SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: dummy
+      SUPABASE_AUTH_EXTERNAL_FACEBOOK_CLIENT_ID: dummy
+      SUPABASE_AUTH_EXTERNAL_FACEBOOK_SECRET: dummy
+      SUPABASE_AUTH_EXTERNAL_X_CLIENT_ID: dummy
+      SUPABASE_AUTH_EXTERNAL_X_SECRET: dummy
+      SUPABASE_AUTH_EXTERNAL_APPLE_SECRET: dummy
+      SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN: dummy
+      OPENAI_API_KEY: dummy
+      S3_HOST: dummy
+      S3_REGION: local
+      S3_ACCESS_KEY: dummy
+      S3_SECRET_KEY: dummy
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11 # ADAPT: your pnpm major
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22 # ADAPT: your node major
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright (Chromium + OS deps)
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase (local stack)
+        run: supabase start
+
+      - name: Export Supabase keys
+        run: |
+          # `supabase status -o env` emits eval-able KEY=value lines (ANON_KEY,
+          # SERVICE_ROLE_KEY, ...). Eval them, then forward the two the app needs.
+          eval "$(supabase status -o env)"
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY}" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}" >> "$GITHUB_ENV"
+
+      - name: Apply migrations
+        run: pnpm db:migrate # ADAPT: your migration command
+
+      - name: Seed data
+        run: pnpm exec tsx scripts/seed-questions.ts # ADAPT: your seed (or remove)
+
+      - name: Run E2E tests
+        run: pnpm test:e2e # ADAPT: the script whose Playwright config starts the dev server
+
+      - name: Upload Playwright artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
