@@ -5,6 +5,8 @@ description: Use when setting up a scheduled routine that periodically reviews a
 
 # e2e-coverage-routine — Scheduled E2E Coverage Growth
 
+> Built on the shared routine skeleton — see [`../_shared/routine-skeleton.md`](../_shared/routine-skeleton.md).
+
 ## Overview
 
 Provisions a self-maintaining E2E loop in a target repo:
@@ -48,8 +50,17 @@ test, it reports it in the PR body as `NEEDS-HUMAN` rather than changing app cod
   `claude/` branch). Goes into the routine, NOT into the repo.
 - `e2e-local.yml` — E2E CI workflow: boots a local Supabase stack, migrates, seeds,
   and runs the Playwright suite on every PR. Copied into `.github/workflows/`.
-- `e2e-coverage-bridge.yml` — on push to `claude/e2e-coverage-*`, opens (or reuses)
-  a PR into the default branch. Copied into `.github/workflows/`.
+- The bridge is the shared `../_shared/templates/pr-bridge.yml` — on push to
+  `claude/e2e-coverage-*`, it opens (or reuses) a PR into the default branch. Copy it
+  into `.github/workflows/e2e-coverage-bridge.yml` and substitute this token table:
+
+  | token | value |
+  | --- | --- |
+  | `{{WORKFLOW_NAME}}` | `E2E coverage PR bridge` |
+  | `{{BRANCH_GLOB}}` | `claude/e2e-coverage-*` |
+  | `{{CONCURRENCY_PREFIX}}` | `e2e-coverage-bridge` |
+  | `{{PR_TITLE}}` | `test(e2e): routine-proposed edge cases (${BRANCH#claude/})` |
+  | `{{DEFAULT_BODY}}` | ``Automated E2E coverage pass — new end-to-end tests proposed by the e2e-coverage routine. The `e2e` check will run them on this PR; review and merge if green.`` |
 
 ## Repo prerequisites (silent failures live here)
 
@@ -68,10 +79,12 @@ test, it reports it in the PR body as `NEEDS-HUMAN` rather than changing app cod
 
 ## Setup procedure
 
-1. **Copy the workflows.** Copy `templates/e2e-local.yml` and
-   `templates/e2e-coverage-bridge.yml` into the target repo's `.github/workflows/`.
-   Commit on the **default branch** (`pull_request` workflows run from the base
-   branch's copy). `routine-prompt.md` is NOT copied — it goes into the routine.
+1. **Copy the workflows.** Copy `templates/e2e-local.yml` into the target repo's
+   `.github/workflows/`, and copy `../_shared/templates/pr-bridge.yml` into
+   `.github/workflows/e2e-coverage-bridge.yml` with the token substitutions from the
+   Components section above. Commit on the **default branch** (`pull_request`
+   workflows run from the base branch's copy). `routine-prompt.md` is NOT copied — it
+   goes into the routine.
 
 2. **Adapt `e2e-local.yml` to the stack.** The template assumes
    pnpm + local Supabase + drizzle + a `test:e2e` script. Update:
@@ -85,9 +98,10 @@ test, it reports it in the PR body as `NEEDS-HUMAN` rather than changing app cod
    Add `retries: process.env.CI ? 2 : 0` to the Playwright config so the first
    test doesn't flake on the dev server's cold per-route compile.
 
-3. **Create the routine** in Claude Code on the web. New routine → paste the full
-   text of `templates/routine-prompt.md` as its instructions → bind it to the
-   target repo → grant at least `Bash, Read, Write, Edit, Glob, Grep`.
+3. **Create the routine** in Claude Code on the web. New routine → paste
+   `../_shared/templates/routine-prompt.preamble.md` first, then the full text of
+   `templates/routine-prompt.md`, as its instructions → bind it to the target repo →
+   grant at least `Bash, Read, Write, Edit, Glob, Grep`.
 
 4. **Schedule it.** Set the routine to run on a cron cadence (weekly is a sensible
    default — frequent enough to keep coverage growing, infrequent enough that PRs

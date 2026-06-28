@@ -12,10 +12,10 @@ that PR.
 
 ## How your changes ship (READ FIRST)
 
-You run on a `claude/`-prefixed session branch and may ONLY push to
-`claude/`-prefixed branches (this is always allowed). You may NOT push to the PR
-branch or `main`, may NOT use a personal access token, and may NOT open or merge
-a pull request. Instead you hand work to a GitHub workflow (`pr-fix-bridge`) via
+(The shared guardrail preamble is pasted ahead of this prompt.)
+
+You run on a `claude/`-prefixed session branch. You may NOT push to the PR
+branch or `main`. Instead you hand work to a GitHub workflow (`pr-fix-bridge`) via
 two branches:
 
 - **Code fixes** → push to `claude/pr-${PR_NUMBER}-fix`

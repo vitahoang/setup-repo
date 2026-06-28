@@ -1,21 +1,22 @@
-name: E2E coverage PR bridge
+name: {{WORKFLOW_NAME}}
 
-# The e2e-coverage routine can only push to `claude/` branches and has no GitHub
-# API access, so it cannot open a PR itself. This workflow fires when the routine
-# pushes its coverage branch and opens (or reuses) a PR into the default branch,
-# using the tip commit's body as the PR description.
+# Shared template — copy into a target repo's .github/workflows/ and replace every
+# {{TOKEN}}. A cloud Claude routine can only push to `claude/` branches and has no
+# GitHub API access, so it cannot open a PR itself. This workflow fires when the
+# routine pushes its branch and opens (or reuses) a PR into the default branch, using
+# the tip commit's body as the PR description.
 
 on:
   push:
     branches:
-      - 'claude/e2e-coverage-*'
+      - '{{BRANCH_GLOB}}'
 
 permissions:
   contents: write
   pull-requests: write
 
 concurrency:
-  group: e2e-coverage-bridge-${{ github.ref_name }}
+  group: {{CONCURRENCY_PREFIX}}-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -23,15 +24,19 @@ jobs:
     if: ${{ github.event.deleted != true }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - name: Open or reuse a PR for the routine's new E2E tests
+      - name: Open or reuse a PR for the routine's branch
         env:
           GH_TOKEN: ${{ github.token }}
           BRANCH: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
+          # Fallback PR body, passed via env so backticks / $ in it stay literal:
+          # referencing "$DEFAULT_BODY" in double quotes never re-expands its contents.
+          DEFAULT_BODY: |
+            {{DEFAULT_BODY}}
         run: |
           set -euo pipefail
 
@@ -46,12 +51,12 @@ jobs:
           fi
 
           # Use the tip commit body as the PR description (the routine writes its
-          # report there); fall back to a default if it's empty.
+          # report there); fall back to DEFAULT_BODY if it is empty.
           body=$(git log -1 --format=%b "origin/$BRANCH")
           if [ -z "$body" ]; then
-            body="Automated E2E coverage pass — new end-to-end tests proposed by the e2e-coverage routine. The \`e2e\` check will run them on this PR; review and merge if green."
+            body="$DEFAULT_BODY"
           fi
 
           gh pr create --repo "$REPO" --base "$base" --head "$BRANCH" \
-            --title "test(e2e): routine-proposed edge cases (${BRANCH#claude/})" \
+            --title "{{PR_TITLE}}" \
             --body "$body"

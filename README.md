@@ -22,6 +22,15 @@ A Claude Code plugin of repo-setup automations.
   local stack (Dockerized Supabase + dev server) and a bridge that turns the
   routine's `claude/` branch into a PR. See
   [`skills/e2e-coverage-routine/SKILL.md`](skills/e2e-coverage-routine/SKILL.md).
+- **dependency-update-routine** — set up a scheduled routine that opens one PR per
+  run with the patch/minor dependency updates that pass the project's check gate,
+  listing majors and sensitive packages as `NEEDS-HUMAN`. Language-agnostic
+  (npm/pip/cargo/go/…); built on the shared routine skeleton. See
+  [`skills/dependency-update-routine/SKILL.md`](skills/dependency-update-routine/SKILL.md).
+
+These routine skills share a common pattern (Claude routine → `claude/` branch →
+Actions bridge → PR), documented in
+[`skills/_shared/routine-skeleton.md`](skills/_shared/routine-skeleton.md).
 
 ## Layout
 
@@ -30,10 +39,16 @@ A Claude Code plugin of repo-setup automations.
   plugin.json        # plugin manifest
   marketplace.json   # makes this repo directly installable as a marketplace
 skills/
+  _shared/
+    routine-skeleton.md  # the pattern every routine skill follows
+    templates/           # shared guardrail preamble + open-a-PR bridge template
   auto-merge-pr/
     SKILL.md
     templates/       # the workflows + routine prompt the skill installs
   e2e-coverage-routine/
     SKILL.md
-    templates/       # e2e CI workflow, PR bridge, routine prompt
+    templates/       # e2e CI workflow + routine prompt (bridge from _shared)
+  dependency-update-routine/
+    SKILL.md
+    templates/       # routine prompt (bridge from _shared)
 ```
