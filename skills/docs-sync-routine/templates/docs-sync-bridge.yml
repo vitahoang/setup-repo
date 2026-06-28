@@ -46,7 +46,12 @@ jobs:
           # variable, so backticks / $ in it are never re-expanded by the shell).
           report=$(git log -1 --format=%b "origin/$BRANCH")
 
-          if [ -n "$(git diff --name-only "origin/$base" "origin/$BRANCH")" ]; then
+          # Decide PR vs issue from what THIS branch changed since it forked from the
+          # default branch. Diffing against the merge-base (not the live base tip) keeps
+          # the decision correct even if the default branch advances after the push, and
+          # captures every commit the routine added to the branch.
+          fork=$(git merge-base "origin/$base" "origin/$BRANCH")
+          if [ -n "$(git diff --name-only "$fork" "origin/$BRANCH")" ]; then
             # Real doc edits -> open or reuse a PR.
             existing=$(gh pr list --repo "$REPO" --head "$BRANCH" --state open \
               --json number --jq '.[0].number // empty')
