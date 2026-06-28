@@ -60,7 +60,7 @@ test, it reports it in the PR body as `NEEDS-HUMAN` rather than changing app cod
   | `{{BRANCH_GLOB}}` | `claude/e2e-coverage-*` |
   | `{{CONCURRENCY_PREFIX}}` | `e2e-coverage-bridge` |
   | `{{PR_TITLE}}` | `test(e2e): routine-proposed edge cases (${BRANCH#claude/})` |
-  | `{{DEFAULT_BODY}}` | `Automated E2E coverage pass — new end-to-end tests proposed by the e2e-coverage routine. The `e2e` check will run them on this PR; review and merge if green.` |
+  | `{{DEFAULT_BODY}}` | ``Automated E2E coverage pass — new end-to-end tests proposed by the e2e-coverage routine. The `e2e` check will run them on this PR; review and merge if green.`` |
 
 ## Repo prerequisites (silent failures live here)
 
