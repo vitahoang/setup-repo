@@ -1,0 +1,38 @@
+name: Clean up routine branches on merge
+
+# The pr-review-em routine leaves two branches per PR: claude/pr-<N>-fix and
+# claude/pr-<N>-verdict. The bridge workflow no longer deletes them (so unlanded
+# fixes survive for inspection), so this workflow removes both once the PR they
+# belong to is merged.
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pr-branch-cleanup-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    if: ${{ github.event.pull_request.merged == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Delete the routine's fix + verdict branches
+        env:
+          N: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          for suffix in fix verdict; do
+            ref="claude/pr-${N}-${suffix}"
+            if git ls-remote --exit-code --heads origin "$ref" >/dev/null 2>&1; then
+              git push origin --delete "$ref" && echo "Deleted $ref."
+            else
+              echo "No branch $ref; nothing to delete."
+            fi
+          done

@@ -1,0 +1,22 @@
+name: Merge on approval
+
+# Squash-merges a PR once a human submits an approving review.
+# This is the merge gate: the review routine never merges on its own.
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge:
+    if: github.event.review.state == 'approved'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Squash-merge the approved PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr merge ${{ github.event.pull_request.number }} --squash --repo ${{ github.repository }}

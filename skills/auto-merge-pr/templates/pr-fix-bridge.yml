@@ -1,0 +1,146 @@
+name: PR fix bridge
+
+# The EM review routine can only push to `claude/` branches, so it cannot put
+# fixes on the PR branch or post a comment itself. This workflow bridges that gap:
+# it fires when the routine pushes its verdict branch, then (1) cherry-picks the
+# routine's fix commits onto the PR's head branch and (2) posts the verdict as a
+# PR comment. Fix commits carry [skip-review], so landing them on the PR head does
+# not re-fire the review workflow.
+
+on:
+  push:
+    branches:
+      - 'claude/pr-*-verdict'   # routine pushes this last; it triggers the bridge
+  pull_request:
+    types: [opened, synchronize, reopened]   # arm a pending check until the routine reviews
+
+permissions:
+  contents: write
+  pull-requests: write
+  statuses: write
+
+concurrency:
+  group: pr-fix-bridge-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  # Register a pending `pr-review-em` status the moment a PR opens (or gets new
+  # commits) so the check item always appears. The routine reviews via Claude's
+  # GitHub integration and pushes claude/pr-<N>-verdict, which fires the `bridge`
+  # job below to resolve this status to success/failure. Without this, a PR the
+  # routine never reviews shows no review gate at all.
+  register:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark pr-review-em pending on the PR head
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/statuses/${{ github.event.pull_request.head.sha }}" \
+            -f state="pending" \
+            -f context="pr-review-em" \
+            -f description="awaiting EM review"
+
+  bridge:
+    # Run only on the verdict-branch push; skip the push event that the bridge's
+    # own branch-deletions raise.
+    if: ${{ github.event_name == 'push' && github.event.deleted != true }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Land fixes onto the PR and post the verdict
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERDICT_REF: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          # claude/pr-<N>-verdict -> N
+          n=$(printf '%s' "$VERDICT_REF" | sed -E 's#^claude/pr-([0-9]+)-verdict$#\1#')
+          if ! printf '%s' "$n" | grep -qE '^[0-9]+$'; then
+            echo "Could not parse a PR number from $VERDICT_REF; nothing to do."
+            exit 0
+          fi
+
+          fix_ref="claude/pr-${n}-fix"
+
+          # This workflow does NOT delete any branches. The fix + verdict branches
+          # are cleaned up by pr-branch-cleanup.yml once the PR is merged.
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          head_ref=$(gh pr view "$n" --json headRefName --jq .headRefName)
+
+          # 1) Land fixes, if the routine pushed a fix branch. The fix branch is the
+          #    PR head plus the routine's [skip-review] commits — and, if it had to
+          #    resolve a conflict with main, a merge commit too. When the PR head has
+          #    not moved since the routine ran, the fix branch is a strict descendant,
+          #    so fast-forward the PR head to it (this lands the merge + fixes). If the
+          #    PR head moved, fall back to cherry-picking just the routine's commits
+          #    (which only works when there is no merge commit to replay).
+          if git ls-remote --exit-code --heads origin "$fix_ref" >/dev/null 2>&1; then
+            landed=false
+            for attempt in 1 2 3 4 5; do
+              git fetch origin "$head_ref" "$fix_ref"
+              if git merge-base --is-ancestor "origin/$head_ref" "origin/$fix_ref"; then
+                git checkout -B "$head_ref" "origin/$fix_ref"
+                if git push origin "HEAD:refs/heads/$head_ref"; then
+                  echo "Fast-forwarded $head_ref to the routine branch (attempt $attempt)."
+                  landed=true
+                  break
+                fi
+              else
+                git checkout -B "$head_ref" "origin/$head_ref"
+                if git cherry-pick "origin/${head_ref}..origin/${fix_ref}" \
+                   && git push origin "HEAD:refs/heads/$head_ref"; then
+                  echo "Cherry-picked routine fixes onto moved $head_ref (attempt $attempt)."
+                  landed=true
+                  break
+                fi
+                git cherry-pick --abort 2>/dev/null || true
+              fi
+              echo "Land attempt $attempt failed (PR head moved or unreplayable merge); retrying..."
+              sleep 5
+            done
+            if [ "$landed" != true ]; then
+              echo "Could not land fixes after 5 attempts; leaving $fix_ref for inspection (a conflict-resolution merge onto a moved PR head needs manual landing)." >&2
+            fi
+          else
+            echo "No fix branch ($fix_ref); posting verdict only."
+          fi
+
+          # 2) Post the verdict comment from the verdict branch.
+          git fetch origin "$VERDICT_REF"
+          git checkout "origin/$VERDICT_REF" -- verdict.md
+          gh pr comment "$n" --body-file verdict.md
+
+          # 3) Mirror the verdict as a `pr-review-em` commit status on the PR head
+          #    so it shows up in the PR's checks box (and can gate merge via branch
+          #    protection). The verdict token is on the first line of verdict.md.
+          #    Land happened above, so re-read the (possibly new) head SHA.
+          verdict_line=$(head -n1 verdict.md)
+          if printf '%s' "$verdict_line" | grep -q 'NEEDS-HUMAN'; then
+            state=failure
+            description="NEEDS-HUMAN — a human should review before merging"
+          elif printf '%s' "$verdict_line" | grep -q 'APPROVE-suggested'; then
+            state=success
+            description="APPROVE-suggested — no blocking issues found"
+          else
+            state=success
+            description="review complete"
+          fi
+
+          head_sha=$(gh pr view "$n" --json headRefOid --jq .headRefOid)
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/statuses/${head_sha}" \
+            -f state="$state" \
+            -f context="pr-review-em" \
+            -f description="$description"
+
+          # Branch cleanup is deferred to pr-branch-cleanup.yml, which runs when
+          # the PR is merged.

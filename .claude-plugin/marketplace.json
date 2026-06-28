@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "setup-repo",
+  "description": "Repo setup plugins by VitaHoang.",
+  "owner": {
+    "name": "VitaHoang"
+  },
+  "plugins": [
+    {
+      "name": "setup-repo",
+      "description": "Repo setup automations. Includes the auto-merge-pr skill: automated PR review + merge-on-approval via a Claude GitHub-integration routine and a fix/verdict bridge.",
+      "author": {
+        "name": "VitaHoang"
+      },
+      "category": "workflow",
+      "source": "./"
+    }
+  ]
+}
