@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "setup-repo",
-      "description": "Repo setup automations. Includes the auto-merge-pr skill: automated PR review + merge-on-approval via a Claude GitHub-integration routine and a fix/verdict bridge.",
+      "description": "Repo setup automations. Includes auto-merge-pr (automated PR review + merge-on-approval via a Claude GitHub-integration routine and a fix/verdict bridge) and e2e-coverage-routine (a scheduled routine that grows E2E coverage via PRs, with an E2E-on-local-stack CI workflow and a PR bridge).",
       "author": {
         "name": "VitaHoang"
       },

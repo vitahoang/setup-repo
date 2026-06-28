@@ -1,7 +1,7 @@
 {
   "name": "setup-repo",
-  "description": "Repo setup automations for Claude Code. Includes auto-merge-pr: provisions a GitHub-integration-triggered EM review routine, a fix/verdict bridge, a pending review check, and merge-on-approval.",
-  "version": "0.1.0",
+  "description": "Repo setup automations for Claude Code. Includes auto-merge-pr (GitHub-integration EM review routine + fix/verdict bridge + merge-on-approval) and e2e-coverage-routine (a scheduled routine that grows E2E coverage via PRs, with an E2E-on-local-stack CI workflow and a PR bridge).",
+  "version": "0.2.0",
   "author": {
     "name": "VitaHoang"
   }
