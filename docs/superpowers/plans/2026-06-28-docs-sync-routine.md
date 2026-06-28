@@ -98,7 +98,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BRANCH: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
-          ISSUE_TITLE: docs-sync: verified doc drift pending review
+          ISSUE_TITLE: "docs-sync: verified doc drift pending review"
         run: |
           set -euo pipefail
 
@@ -166,7 +166,7 @@ bash -n /tmp/docs_sync_run.sh && echo "SHELL-SYNTAX-OK"
 grep -q 'gh pr create' /tmp/docs_sync_run.sh && grep -q 'gh issue create' /tmp/docs_sync_run.sh && \
   grep -q 'gh issue edit' /tmp/docs_sync_run.sh && grep -q 'git diff --name-only' /tmp/docs_sync_run.sh && \
   echo "BOTH-ROUTES-PRESENT"
-grep -q "ISSUE_TITLE: docs-sync: verified doc drift pending review" "$F" && echo "ISSUE-TITLE-OK"
+grep -q 'docs-sync: verified doc drift pending review' "$F" && echo "ISSUE-TITLE-OK"
 ```
 Expected: `YAML-OK; permissions OK`, `SHELL-SYNTAX-OK`, `BOTH-ROUTES-PRESENT`, `ISSUE-TITLE-OK`.
 

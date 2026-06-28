@@ -38,6 +38,9 @@ Every routine-style skill in this plugin shares one shape. This doc names it so 
   - Routines that instead LAND work onto an *existing* PR + post a verdict (today:
     `auto-merge-pr`) need a different, specialized bridge — they still follow the
     branch convention and preamble, but ship their own bridge workflow.
+  - Routines that report findings as a GitHub **issue** when there is nothing to PR
+    (e.g. docs-sync) ship their own **PR-or-issue** bridge for now; it is a candidate
+    to promote into `templates/` once a second such routine exists.
 - **Escalation protocol.** Put anything the routine refuses to auto-do under a
   `NEEDS-HUMAN` heading in the commit/verdict body, with reason + evidence.
 - **Gate auto-detection.** To find a project's check command: a `check` script in
