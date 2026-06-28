@@ -5,6 +5,8 @@ description: Use when setting up automated pull-request review and merge-on-appr
 
 # auto-merge-pr — Automated PR Review + Merge-on-Approval
 
+> Built on the shared routine skeleton — see [`../_shared/routine-skeleton.md`](../_shared/routine-skeleton.md). This skill uses the skeleton's guardrail preamble but ships its own specialized land-fixes-and-verdict bridge (not the shared open-a-PR bridge).
+
 ## Overview
 
 Provisions a PR pipeline in a target repo. A Claude Code routine — fired by
@@ -95,7 +97,9 @@ routine half to match in step 4.
    default `pnpm check`). No edit needed unless the project has no check script;
    if so, add one or name the command in the routine prompt's Step 3.
 3. **Create the routine** in Claude Code on the web (claude.ai). Create a new
-   routine/automation, paste the full text of `templates/routine-prompt.md` as its
+   routine/automation; paste the full text of
+   `../_shared/templates/routine-prompt.preamble.md` FIRST, then the full text of
+   `templates/routine-prompt.md` as its
    instructions, set its repository/source to the target repo, and grant at least
    `Bash, Read, Write, Edit, Glob, Grep`. (The routine runs in Claude's cloud
    environment, which can install deps and run the gate.) Exact menu labels live
