@@ -28,7 +28,11 @@ Every routine-style skill in this plugin shares one shape. This doc names it so 
   routines that OPEN a fresh PR from their branch (dep-update, e2e-coverage, and the
   future docs-sync / flaky-test / security-triage). Copy it into the target repo's
   `.github/workflows/` and substitute `{{WORKFLOW_NAME}}`, `{{BRANCH_GLOB}}`,
-  `{{CONCURRENCY_PREFIX}}`, `{{PR_TITLE}}`, `{{DEFAULT_BODY}}`.
+  `{{CONCURRENCY_PREFIX}}`, `{{PR_TITLE}}`, `{{DEFAULT_BODY}}`. Token values are plain
+  text: `{{DEFAULT_BODY}}` is emitted inside a quoted here-doc (backticks / `$` stay
+  literal — no escaping needed), while `{{PR_TITLE}}` is a normal shell string, so it
+  *may* use an expansion like `${BRANCH#claude/}` if a skill wants the branch name in
+  the title.
   - Routines that instead LAND work onto an *existing* PR + post a verdict (today:
     `auto-merge-pr`) need a different, specialized bridge — they still follow the
     branch convention and preamble, but ship their own bridge workflow.

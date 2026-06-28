@@ -1,12 +1,10 @@
 name: {{WORKFLOW_NAME}}
 
-# A cloud Claude routine can only push to `claude/` branches and has no GitHub API
-# access, so it cannot open a PR itself. This workflow fires when the routine pushes
-# its branch and opens (or reuses) a PR into the default branch, using the tip
-# commit's body as the PR description.
-#
-# This file is a TEMPLATE. Copy it into the target repo's .github/workflows/ and
-# replace every {{TOKEN}} with the values your skill's SKILL.md specifies.
+# Shared template — copy into a target repo's .github/workflows/ and replace every
+# {{TOKEN}}. A cloud Claude routine can only push to `claude/` branches and has no
+# GitHub API access, so it cannot open a PR itself. This workflow fires when the
+# routine pushes its branch and opens (or reuses) a PR into the default branch, using
+# the tip commit's body as the PR description.
 
 on:
   push:
@@ -35,6 +33,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BRANCH: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
+          # Fallback PR body, passed via env so backticks / $ in it stay literal:
+          # referencing "$DEFAULT_BODY" in double quotes never re-expands its contents.
+          DEFAULT_BODY: |
+            {{DEFAULT_BODY}}
         run: |
           set -euo pipefail
 
@@ -49,10 +51,10 @@ jobs:
           fi
 
           # Use the tip commit body as the PR description (the routine writes its
-          # report there); fall back to a default if it's empty.
+          # report there); fall back to DEFAULT_BODY if it is empty.
           body=$(git log -1 --format=%b "origin/$BRANCH")
           if [ -z "$body" ]; then
-            body="{{DEFAULT_BODY}}"
+            body="$DEFAULT_BODY"
           fi
 
           gh pr create --repo "$REPO" --base "$base" --head "$BRANCH" \
