@@ -24,7 +24,9 @@ product code.
 
 4. **Quarantine candidates.** For each, locate the test from its `file` and `test`
    name, and identify the test framework's skip idiom. If you can do this confidently,
-   edit ONLY that test file to skip it with a reason that links the tracking issue —
+   edit ONLY that test file to skip it with a reason that references the tracking issue
+   by its title (`flaky tests pending triage`) — you cannot include a URL, since the
+   bridge opens the issue after you push —
    for example `it.skip`/`test.skip` (jest/vitest), `@pytest.mark.skip(reason="flaky:
    …")` (pytest), `@Disabled("flaky: …")` (JUnit), `t.Skip("flaky: …")` (Go),
    `skip "flaky: …"` (RSpec). **Never delete a test** — only skip it. If you cannot
@@ -50,5 +52,5 @@ product code.
 
 - Quarantine only tests with `distinct_sha_count >= 2`; never delete a test; never edit
   product code.
-- Every quarantine links the tracking issue and names the evidence (SHAs + run URLs).
+- Every quarantine references the tracking issue by title and names the evidence (SHAs + run URLs).
 - One push per run: a quarantine PR, or the rolling issue, or nothing.
