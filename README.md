@@ -38,6 +38,11 @@ A Claude Code plugin of repo-setup automations.
   a tracking issue with the evidence or opens a PR quarantining strongly-confirmed
   flaky tests. Built on the shared routine skeleton. See
   [`skills/flaky-test-routine/SKILL.md`](skills/flaky-test-routine/SKILL.md).
+- **security-triage-routine** — set up PR security triage: a PR-triggered routine scans
+  the diff (gitleaks, dependency audit, semgrep) plus GitHub code-scanning alerts, posts
+  a `security-triage` check + triaged comment, auto-fixes only safe dependency bumps, and
+  escalates secrets and code findings as `NEEDS-HUMAN`. See
+  [`skills/security-triage-routine/SKILL.md`](skills/security-triage-routine/SKILL.md).
 
 These routine skills share a common pattern (Claude routine → `claude/` branch →
 Actions bridge → PR), documented in
@@ -69,4 +74,7 @@ skills/
     SKILL.md
     test_flaky_parse.py
     templates/       # collector + JUnit parser + routine prompt + PR-or-issue bridge
+  security-triage-routine/
+    SKILL.md
+    templates/       # routine prompt + register/land-verdict bridge
 ```
