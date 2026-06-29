@@ -143,8 +143,9 @@ jobs:
             state=success
             description="SECURE-suggested — no blocking PR-introduced findings"
           else
-            state=success
-            description="security triage complete"
+            # Fail-safe: an unrecognized verdict token must NOT pass a security gate.
+            state=failure
+            description="unexpected verdict format — manual security review required"
           fi
 
           head_sha=$(gh pr view "$n" --json headRefOid --jq .headRefOid)
