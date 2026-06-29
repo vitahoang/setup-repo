@@ -64,10 +64,13 @@ These change repo behavior, so show the exact commands and ask before running th
 
   If `repo-bootstrap: default branch protection` is absent, confirm the keystone: the
   ruleset requires a status context named `check`, which must equal the CI job name from
-  step 2. (If the repo's existing CI uses a different job name, edit `templates/ruleset.json`
-  to that context before posting.) Then:
+  step 2. (If the repo's existing CI uses a different job name, set that context in the
+  payload instead.) Then write this skill's `templates/ruleset.json` to a temp file and
+  post it (`--input` needs a path that resolves from the target repo's working directory,
+  so don't pass the plugin-relative template path):
 
-      gh api -X POST "repos/$REPO/rulesets" --input templates/ruleset.json
+      cp <path-to>/templates/ruleset.json /tmp/ruleset.json   # or write the JSON yourself
+      gh api -X POST "repos/$REPO/rulesets" --input /tmp/ruleset.json
 
   `~DEFAULT_BRANCH` in the payload targets the repo's default branch automatically.
 
