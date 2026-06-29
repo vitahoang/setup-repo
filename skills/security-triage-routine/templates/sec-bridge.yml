@@ -1,0 +1,153 @@
+name: Security triage bridge
+
+# The security-triage routine can only push to `claude/` branches and has no GitHub
+# API access. This workflow bridges that gap:
+#   - register (on pull_request): posts a pending `security-triage` check on the PR
+#     head, AND publishes the PR's code-scanning alerts to claude/pr-<N>-secinput so
+#     the routine can read them over git.
+#   - bridge (on push to claude/pr-<N>-secverdict): lands the routine's dep-bump fix
+#     (claude/pr-<N>-secfix) onto the PR head, posts the verdict comment, and resolves
+#     the `security-triage` check from the verdict token.
+
+on:
+  push:
+    branches:
+      - 'claude/pr-*-secverdict'   # routine pushes this last; it triggers the bridge
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+  statuses: write
+  security-events: read
+
+concurrency:
+  group: sec-bridge-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  register:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      N: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Pending check + publish code-scanning alerts for the routine
+        run: |
+          set -euo pipefail
+
+          # 1) Pending security-triage status so the check always appears.
+          gh api -X POST "repos/${REPO}/statuses/${HEAD_SHA}" \
+            -f state="pending" -f context="security-triage" \
+            -f description="awaiting security triage"
+
+          # 2) Fetch the PR's open code-scanning alerts (empty array if code scanning is
+          #    off or none exist) so the routine can triage them too.
+          gh api "repos/${REPO}/code-scanning/alerts?ref=refs/pull/${N}/head&state=open" \
+            --paginate > codeql-alerts.json 2>/dev/null || echo '[]' > codeql-alerts.json
+          [ -s codeql-alerts.json ] || echo '[]' > codeql-alerts.json
+
+          # 3) Publish them on a per-PR input branch the routine reads over git.
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          tmp=$(mktemp -d); cp codeql-alerts.json "$tmp/codeql-alerts.json"
+          git checkout --orphan "claude/pr-${N}-secinput"
+          git rm -rf . >/dev/null 2>&1 || true
+          cp "$tmp/codeql-alerts.json" codeql-alerts.json
+          git add codeql-alerts.json
+          git commit -m "code-scanning alerts for PR #${N}"
+          git push -f origin "claude/pr-${N}-secinput"
+
+  bridge:
+    if: ${{ github.event_name == 'push' && github.event.deleted != true }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Land the dep-bump fix, post the verdict, resolve the check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERDICT_REF: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          # claude/pr-<N>-secverdict -> N
+          n=$(printf '%s' "$VERDICT_REF" | sed -E 's#^claude/pr-([0-9]+)-secverdict$#\1#')
+          if ! printf '%s' "$n" | grep -qE '^[0-9]+$'; then
+            echo "Could not parse a PR number from $VERDICT_REF; nothing to do."
+            exit 0
+          fi
+
+          fix_ref="claude/pr-${n}-secfix"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          head_ref=$(gh pr view "$n" --json headRefName --jq .headRefName)
+
+          # 1) Land the dep-bump fix, if the routine pushed one. Fast-forward the PR head
+          #    to the fix branch when it descends from the current head; otherwise
+          #    cherry-pick the routine's commits onto the (moved) head.
+          if git ls-remote --exit-code --heads origin "$fix_ref" >/dev/null 2>&1; then
+            landed=false
+            for attempt in 1 2 3 4 5; do
+              git fetch origin "$head_ref" "$fix_ref"
+              if git merge-base --is-ancestor "origin/$head_ref" "origin/$fix_ref"; then
+                git checkout -B "$head_ref" "origin/$fix_ref"
+                if git push origin "HEAD:refs/heads/$head_ref"; then
+                  echo "Fast-forwarded $head_ref to the fix branch (attempt $attempt)."
+                  landed=true
+                  break
+                fi
+              else
+                git checkout -B "$head_ref" "origin/$head_ref"
+                if git cherry-pick "origin/${head_ref}..origin/${fix_ref}" \
+                   && git push origin "HEAD:refs/heads/$head_ref"; then
+                  echo "Cherry-picked fix onto moved $head_ref (attempt $attempt)."
+                  landed=true
+                  break
+                fi
+                git cherry-pick --abort 2>/dev/null || true
+              fi
+              echo "Land attempt $attempt failed; retrying..."
+              sleep 5
+            done
+            if [ "$landed" != true ]; then
+              echo "Could not land the fix after 5 attempts; leaving $fix_ref for inspection." >&2
+            fi
+          else
+            echo "No fix branch ($fix_ref); posting verdict only."
+          fi
+
+          # 2) Post the verdict comment from the verdict branch.
+          git fetch origin "$VERDICT_REF"
+          git checkout "origin/$VERDICT_REF" -- verdict.md
+          gh pr comment "$n" --body-file verdict.md
+
+          # 3) Resolve the security-triage status from the verdict token (first line).
+          verdict_line=$(head -n1 verdict.md)
+          if printf '%s' "$verdict_line" | grep -q 'NEEDS-HUMAN'; then
+            state=failure
+            description="NEEDS-HUMAN — a security finding needs a human"
+          elif printf '%s' "$verdict_line" | grep -q 'SECURE-suggested'; then
+            state=success
+            description="SECURE-suggested — no blocking PR-introduced findings"
+          else
+            # Fail-safe: an unrecognized verdict token must NOT pass a security gate.
+            state=failure
+            description="unexpected verdict format — manual security review required"
+          fi
+
+          head_sha=$(gh pr view "$n" --json headRefOid --jq .headRefOid)
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/statuses/${head_sha}" \
+            -f state="$state" -f context="security-triage" -f description="$description"
