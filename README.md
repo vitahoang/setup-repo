@@ -27,6 +27,12 @@ A Claude Code plugin of repo-setup automations.
   listing majors and sensitive packages as `NEEDS-HUMAN`. Language-agnostic
   (npm/pip/cargo/go/…); built on the shared routine skeleton. See
   [`skills/dependency-update-routine/SKILL.md`](skills/dependency-update-routine/SKILL.md).
+- **docs-sync-routine** — set up a scheduled routine that keeps docs in sync with
+  code: it fixes verifiable code/doc drift (broken command/path refs, stale env vars,
+  mismatched API signatures, failing examples, stale generated API docs) via a PR, and
+  files a tracking issue for verified drift it can't safely auto-fix. Built on the
+  shared routine skeleton. See
+  [`skills/docs-sync-routine/SKILL.md`](skills/docs-sync-routine/SKILL.md).
 
 These routine skills share a common pattern (Claude routine → `claude/` branch →
 Actions bridge → PR), documented in
@@ -51,4 +57,7 @@ skills/
   dependency-update-routine/
     SKILL.md
     templates/       # routine prompt (bridge from _shared)
+  docs-sync-routine/
+    SKILL.md
+    templates/       # routine prompt + PR-or-issue bridge
 ```

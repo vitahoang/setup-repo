@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "setup-repo",
-      "description": "Repo setup automations. Includes auto-merge-pr (automated PR review + merge-on-approval via a Claude GitHub-integration routine and a fix/verdict bridge), e2e-coverage-routine (a scheduled routine that grows E2E coverage via PRs, with an E2E-on-local-stack CI workflow and a PR bridge), and dependency-update-routine (a scheduled routine that opens one PR/run of gate-green patch/minor dependency updates, escalating majors/sensitive packages).",
+      "description": "Repo setup automations. Includes auto-merge-pr (automated PR review + merge-on-approval via a Claude GitHub-integration routine and a fix/verdict bridge), e2e-coverage-routine (a scheduled routine that grows E2E coverage via PRs, with an E2E-on-local-stack CI workflow and a PR bridge), dependency-update-routine (a scheduled routine that opens one PR/run of gate-green patch/minor dependency updates, escalating majors/sensitive packages), and docs-sync-routine (scheduled code/doc drift sync via PR or tracking issue).",
       "author": {
         "name": "VitaHoang"
       },
