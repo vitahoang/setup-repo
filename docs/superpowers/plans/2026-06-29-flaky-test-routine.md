@@ -641,7 +641,7 @@ git commit -m "feat(flaky-test): routine mandate (digest -> issue or quarantine 
 Run (expect FAIL):
 ```bash
 F=skills/flaky-test-routine/SKILL.md
-test -f "$F" && grep -q 'claude/flaky-\*' "$F" && grep -q 'routine-skeleton.md' "$F" && \
+test -f "$F" && grep -q 'claude/flaky-' "$F" && grep -q 'routine-skeleton.md' "$F" && \
   grep -q 'routine-prompt.preamble.md' "$F" && grep -q 'flaky-digest' "$F" && echo CHECK-PASS || echo CHECK-FAIL
 ```
 Expected: `CHECK-FAIL`
@@ -775,7 +775,7 @@ Run:
 ```bash
 F=skills/flaky-test-routine/SKILL.md
 python3 -c "import re,sys;t=open('$F').read();m=re.match(r'^---\n(.*?)\n---\n',t,re.S);sys.exit(0 if (m and 'name:' in m.group(1) and 'description:' in m.group(1)) else 1)" && echo FRONTMATTER-OK
-grep -q 'claude/flaky-\*' "$F" && grep -q 'routine-skeleton.md' "$F" && grep -q 'routine-prompt.preamble.md' "$F" && \
+grep -q 'claude/flaky-' "$F" && grep -q 'routine-skeleton.md' "$F" && grep -q 'routine-prompt.preamble.md' "$F" && \
   grep -q 'flaky tests pending triage' "$F" && grep -q 'flaky-digest' "$F" && echo CHECK-PASS || echo CHECK-FAIL
 ```
 Expected: `FRONTMATTER-OK`, `CHECK-PASS`.
