@@ -1,7 +1,7 @@
 {
   "name": "setup-repo",
-  "description": "Repo setup automations for Claude Code. Includes auto-merge-pr (GitHub-integration EM review routine + fix/verdict bridge + merge-on-approval), e2e-coverage-routine (a scheduled routine that grows E2E coverage via PRs, with an E2E-on-local-stack CI workflow and a PR bridge), dependency-update-routine (a scheduled routine that opens one PR/run of gate-green patch/minor dependency updates, escalating majors/sensitive packages), docs-sync-routine (scheduled code/doc drift sync via PR or tracking issue), flaky-test-routine (CI-history flaky-test triage via issue or quarantine PR), and security-triage-routine (PR security triage via scanners + code-scanning alerts, dep-only auto-fix). Routine skills share a common skeleton in skills/_shared.",
-  "version": "0.6.0",
+  "description": "Repo setup automations for Claude Code. Includes auto-merge-pr (GitHub-integration EM review routine + fix/verdict bridge + merge-on-approval), e2e-coverage-routine (a scheduled routine that grows E2E coverage via PRs, with an E2E-on-local-stack CI workflow and a PR bridge), dependency-update-routine (a scheduled routine that opens one PR/run of gate-green patch/minor dependency updates, escalating majors/sensitive packages), docs-sync-routine (scheduled code/doc drift sync via PR or tracking issue), flaky-test-routine (CI-history flaky-test triage via issue or quarantine PR), security-triage-routine (PR security triage via scanners + code-scanning alerts, dep-only auto-fix), and repo-bootstrap (one-shot scaffolder: check gate, CI, CLAUDE.md, PR template, squash settings, branch-protection ruleset). Routine skills share a common skeleton in skills/_shared.",
+  "version": "0.7.0",
   "author": {
     "name": "VitaHoang"
   }

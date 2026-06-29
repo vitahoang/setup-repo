@@ -1,0 +1,30 @@
+name: CI
+
+# Base CI gate scaffolded by repo-bootstrap. The job MUST stay named `check` so the
+# default-branch ruleset can require it (the ruleset requires a status context named
+# `check`). repo-bootstrap fills the language setup + the actual check command below.
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      # repo-bootstrap replaces the step below with your stack's setup + check command,
+      # e.g. actions/setup-node then `npm ci && npm run check`, or `make check`, or
+      # `./check.sh`. Keep the job id `check`.
+      - name: Run check
+        run: |
+          echo "repo-bootstrap: replace this with your project's check command (see CLAUDE.md Commands)." >&2
+          exit 1

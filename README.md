@@ -48,6 +48,15 @@ These routine skills share a common pattern (Claude routine → `claude/` branch
 Actions bridge → PR), documented in
 [`skills/_shared/routine-skeleton.md`](skills/_shared/routine-skeleton.md).
 
+`repo-bootstrap` is the exception — a one-shot scaffolder (not a routine) that sets up the
+foundation the routines assume:
+
+- **repo-bootstrap** — a one-shot scaffolder (run by the agent, not a routine) that sets
+  up the foundation the other skills assume: a `check` gate, base CI, `CLAUDE.md`, PR
+  template, squash-merge settings, and a default-branch protection ruleset (block
+  force-push + deletion, require a PR + the CI check). Detects what exists and fills only
+  the gaps. See [`skills/repo-bootstrap/SKILL.md`](skills/repo-bootstrap/SKILL.md).
+
 ## Layout
 
 ```
@@ -77,4 +86,7 @@ skills/
   security-triage-routine/
     SKILL.md
     templates/       # routine prompt + register/land-verdict bridge
+  repo-bootstrap/
+    SKILL.md
+    templates/       # ci.yml + ruleset.json + PR template + CLAUDE.md starter
 ```
