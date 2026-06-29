@@ -1,0 +1,73 @@
+name: flaky-test collector
+
+# Mines recent runs of your test workflow + their JUnit artifacts into
+# flaky-digest.json on the `flaky-digest` data branch, which the flaky-test routine
+# reads. Configure the four env values below for your repo. Also: your test workflow
+# must upload its JUnit/test-result XML as an artifact named ARTIFACT_NAME.
+
+on:
+  schedule:
+    - cron: '17 6 * * *'   # daily; adjust as you like
+  workflow_dispatch: {}
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: flaky-collector
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      TEST_WORKFLOW: ci.yml          # the workflow whose tests you track
+      ARTIFACT_NAME: test-results    # the JUnit artifact name your CI uploads
+      WINDOW_DAYS: '14'
+      DIGEST_BRANCH: flaky-digest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Download recent runs + JUnit artifacts
+        run: |
+          set -euo pipefail
+          base=$(gh repo view "$REPO" --json defaultBranchRef --jq .defaultBranchRef.name)
+          since=$(date -u -d "-${WINDOW_DAYS} days" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null \
+                  || date -u -v-"${WINDOW_DAYS}"d +%Y-%m-%dT%H:%M:%SZ)
+          mkdir -p runs
+          gh run list --repo "$REPO" --workflow "$TEST_WORKFLOW" --branch "$base" \
+            --status completed --limit 200 \
+            --json databaseId,headSha,url,createdAt \
+            --jq ".[] | select(.createdAt >= \"$since\")" > runs.ndjson || true
+          while IFS= read -r line; do
+            [ -n "$line" ] || continue
+            id=$(printf '%s' "$line" | python3 -c "import sys,json;print(json.load(sys.stdin)['databaseId'])")
+            mkdir -p "runs/$id"
+            printf '%s' "$line" | python3 -c "import sys,json;d=json.load(sys.stdin);json.dump({'sha':d['headSha'],'url':d['url'],'created_at':d['createdAt']},open('runs/$id/meta.json','w'))"
+            gh run download "$id" --repo "$REPO" -n "$ARTIFACT_NAME" -D "runs/$id" 2>/dev/null || true
+          done < runs.ndjson
+
+      - name: Build the digest
+        run: |
+          set -euo pipefail
+          python3 .github/flaky_parse.py runs --workflow "$TEST_WORKFLOW" --window-days "$WINDOW_DAYS" > flaky-digest.json
+          cat flaky-digest.json
+
+      - name: Publish the digest to its data branch
+        run: |
+          set -euo pipefail
+          git config user.name "flaky-collector[bot]"
+          git config user.email "flaky-collector[bot]@users.noreply.github.com"
+          tmp=$(mktemp -d)
+          cp flaky-digest.json "$tmp/flaky-digest.json"
+          git checkout --orphan "$DIGEST_BRANCH"
+          git rm -rf . >/dev/null 2>&1 || true
+          cp "$tmp/flaky-digest.json" flaky-digest.json
+          git add flaky-digest.json
+          git commit -m "flaky digest $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push -f origin "$DIGEST_BRANCH"
