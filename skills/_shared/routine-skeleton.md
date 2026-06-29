@@ -38,6 +38,8 @@ Every routine-style skill in this plugin shares one shape. This doc names it so 
   - Routines that instead LAND work onto an *existing* PR + post a verdict (today:
     `auto-merge-pr`) need a different, specialized bridge — they still follow the
     branch convention and preamble, but ship their own bridge workflow.
+    (Two such skills now exist — auto-merge-pr and security-triage — each ships its own
+    register+land/verdict bridge with a distinct check name.)
   - Routines that report findings as a GitHub **issue** when there is nothing to PR
     (e.g. docs-sync) ship their own **PR-or-issue** bridge for now; it is a candidate
     to promote into `templates/` once a second such routine exists.
