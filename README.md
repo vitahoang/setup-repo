@@ -33,6 +33,11 @@ A Claude Code plugin of repo-setup automations.
   files a tracking issue for verified drift it can't safely auto-fix. Built on the
   shared routine skeleton. See
   [`skills/docs-sync-routine/SKILL.md`](skills/docs-sync-routine/SKILL.md).
+- **flaky-test-routine** — set up a scheduled collector that mines CI runs + JUnit
+  artifacts for flaky tests (same-SHA pass/fail disagreement), plus a routine that files
+  a tracking issue with the evidence or opens a PR quarantining strongly-confirmed
+  flaky tests. Built on the shared routine skeleton. See
+  [`skills/flaky-test-routine/SKILL.md`](skills/flaky-test-routine/SKILL.md).
 
 These routine skills share a common pattern (Claude routine → `claude/` branch →
 Actions bridge → PR), documented in
@@ -60,4 +65,8 @@ skills/
   docs-sync-routine/
     SKILL.md
     templates/       # routine prompt + PR-or-issue bridge
+  flaky-test-routine/
+    SKILL.md
+    test_flaky_parse.py
+    templates/       # collector + JUnit parser + routine prompt + PR-or-issue bridge
 ```
