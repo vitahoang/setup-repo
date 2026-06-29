@@ -19,7 +19,7 @@ docs** — never product code — and **code is the source of truth**.
 
 ## Flow
 
-    cron fires the routine (Claude Code on the web, schedule-bound to the repo)
+    cron fires the routine (a Claude Code cloud routine, schedule-bound to the repo)
             |
             v
     routine: run the 6-check battery -> classify (unambiguous fix vs escalate) ->
@@ -67,12 +67,16 @@ is escalated as `NEEDS-HUMAN`.
 
 1. **Copy the bridge.** Copy `templates/docs-sync-bridge.yml` into the target repo's
    `.github/workflows/`. Commit on the **default branch**.
-2. **Create the routine** in Claude Code on the web. Paste
-   `../_shared/templates/routine-prompt.preamble.md` first, then the full text of
-   `templates/routine-prompt.md`, as the instructions. Bind it to the target repo and
-   grant at least `Bash, Read, Write, Edit, Glob, Grep`.
-3. **Set the schedule.** Configure the routine to run on a cron — **weekly** is the
-   recommended default.
+2. **Provision the routine with `/schedule`.** Assemble the prompt: the shared preamble
+   (`../_shared/templates/routine-prompt.preamble.md`) followed by the full text of
+   `templates/routine-prompt.md`. Invoke **`/schedule`** to create a **recurring cloud
+   routine** bound to the target repo that runs that prompt on a weekly cron — a sensible
+   default is `34 7 * * 2` (Tue ~07:34 local) — with tools
+   `Bash, Read, Write, Edit, Glob, Grep`.
+
+   *Manual fallback:* if `/schedule` can't bind the repo in your environment, create the
+   routine in Claude Code on the web instead — paste the same preamble + prompt, bind it
+   to the repo, grant the same tools, and set the same weekly cron.
 
 ## How to verify it works
 

@@ -26,7 +26,7 @@ test, it reports it in the PR body as `NEEDS-HUMAN` rather than changing app cod
 
 ## Flow
 
-    cron fires the routine (Claude Code on the web, schedule-bound to the repo)
+    cron fires the routine (a Claude Code cloud routine, schedule-bound to the repo)
             |
             v
     routine: pull default branch -> enumerate user-facing flows ->
@@ -98,17 +98,19 @@ test, it reports it in the PR body as `NEEDS-HUMAN` rather than changing app cod
    Add `retries: process.env.CI ? 2 : 0` to the Playwright config so the first
    test doesn't flake on the dev server's cold per-route compile.
 
-3. **Create the routine** in Claude Code on the web. New routine → paste
-   `../_shared/templates/routine-prompt.preamble.md` first, then the full text of
-   `templates/routine-prompt.md`, as its instructions → bind it to the target repo →
-   grant at least `Bash, Read, Write, Edit, Glob, Grep`.
+3. **Provision the routine with `/schedule`.** Assemble the prompt: the shared preamble
+   (`../_shared/templates/routine-prompt.preamble.md`) followed by the full text of
+   `templates/routine-prompt.md`. Invoke **`/schedule`** to create a **recurring cloud
+   routine** bound to the target repo that runs that prompt on a weekly cron — a sensible
+   default is `47 7 * * 3` (Wed ~07:47 local) — with tools
+   `Bash, Read, Write, Edit, Glob, Grep`. This is the load-bearing step: without a
+   schedule the routine never fires.
 
-4. **Schedule it.** Set the routine to run on a cron cadence (weekly is a sensible
-   default — frequent enough to keep coverage growing, infrequent enough that PRs
-   stay reviewable). This is the load-bearing step: without a schedule the routine
-   never fires.
+   *Manual fallback:* if `/schedule` can't bind the repo in your environment, create the
+   routine in Claude Code on the web instead — paste the same preamble + prompt, bind it
+   to the repo, grant the same tools, and set the same weekly cron.
 
-5. **(Optional) Reuse an existing E2E workflow.** If the repo already has an E2E CI
+4. **(Optional) Reuse an existing E2E workflow.** If the repo already has an E2E CI
    workflow, skip `e2e-local.yml` and just confirm its job is named `e2e` (the
    bridge and the routine refer to the `e2e` check by name).
 
@@ -145,7 +147,7 @@ permission.
 
 | Symptom | Cause / fix |
 |---|---|
-| Routine never runs | No schedule set (step 4), or the routine isn't bound to the repo. |
+| Routine never runs | Not provisioned via `/schedule` (step 3), or the routine isn't bound to the repo. |
 | Branch pushed but no PR | `e2e-coverage-bridge.yml` not on the default branch, or Actions is read-only (403). |
 | `e2e` check missing on the PR | `e2e-local.yml` not on the default branch, or its job isn't named `e2e`. |
 | `supabase start` fails on an unset `env()` | A provider/section is `enabled = true` with an `env(NAME)` whose var isn't set — add a dummy in `e2e-local.yml`'s `env:`. |

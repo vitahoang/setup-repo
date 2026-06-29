@@ -21,7 +21,7 @@ The routine **only edits manifests and lockfiles** — never product code.
 
 ## Flow
 
-    cron fires the routine (Claude Code on the web, schedule-bound to the repo)
+    cron fires the routine (a Claude Code cloud routine, schedule-bound to the repo)
             |
             v
     routine: detect ecosystems -> classify outdated deps ->
@@ -47,8 +47,8 @@ The routine **only edits manifests and lockfiles** — never product code.
 
 ## Components
 
-- `templates/routine-prompt.md` — the routine's mandate (pasted into the web routine
-  after the shared preamble).
+- `templates/routine-prompt.md` — the routine's mandate (assembled after the shared preamble
+  and given to the routine).
 - The bridge is the shared `../_shared/templates/pr-bridge.yml`, copied into the
   target repo with this token table:
 
@@ -72,13 +72,17 @@ The routine **only edits manifests and lockfiles** — never product code.
 1. **Copy the bridge.** Copy `../_shared/templates/pr-bridge.yml` into the target
    repo's `.github/workflows/dep-update-bridge.yml` and replace every `{{TOKEN}}`
    with the value from the token table above. Commit on the **default branch**.
-2. **Create the routine** in Claude Code on the web. Paste
-   `../_shared/templates/routine-prompt.preamble.md` first, then the full text of
-   `templates/routine-prompt.md`, as the instructions. Bind it to the target repo and
-   grant at least `Bash, Read, Write, Edit, Glob, Grep`.
-3. **Set the schedule.** Configure the routine to run on a cron — **weekly** is the
-   recommended default.
-4. **(Recommended) Auto-delete merged branches.** Settings → General → Pull Requests →
+2. **Provision the routine with `/schedule`.** Assemble the prompt: the shared preamble
+   (`../_shared/templates/routine-prompt.preamble.md`) followed by the full text of
+   `templates/routine-prompt.md`. Invoke **`/schedule`** to create a **recurring cloud
+   routine** bound to the target repo that runs that prompt on a weekly cron — a sensible
+   default is `19 7 * * 1` (Mon ~07:19 local) — with tools
+   `Bash, Read, Write, Edit, Glob, Grep`.
+
+   *Manual fallback:* if `/schedule` can't bind the repo in your environment, create the
+   routine in Claude Code on the web instead — paste the same preamble + prompt, bind it
+   to the repo, grant the same tools, and set the same weekly cron.
+3. **(Recommended) Auto-delete merged branches.** Settings → General → Pull Requests →
    **Automatically delete head branches**, so merged `claude/dep-update-*` branches
    are cleaned up.
 

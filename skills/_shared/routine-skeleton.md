@@ -5,7 +5,7 @@ Every routine-style skill in this plugin shares one shape. This doc names it so 
 
 ## The shape
 
-    cron / GitHub event fires a Claude Code routine (bound to the repo on the web)
+    cron / GitHub event fires a Claude Code routine (a cloud routine bound to the repo)
             |
             v
     routine inspects the repo, does its domain work, pushes claude/<purpose>-<id>
@@ -21,8 +21,9 @@ Every routine-style skill in this plugin shares one shape. This doc names it so 
 
 - **Branch convention.** The routine pushes only to `claude/<purpose>-<id>`. Never
   the default branch, never a PR head directly.
-- **Guardrail preamble.** `templates/routine-prompt.preamble.md` — paste it FIRST,
-  ahead of the skill's own routine prompt, when creating the routine on the web. It
+- **Guardrail preamble.** `templates/routine-prompt.preamble.md` — assemble it FIRST,
+  ahead of the skill's own routine prompt, when provisioning the routine (via `/schedule`
+  or on the web). It
   carries the only-push-to-`claude/`, no-API, no-merge, and `NEEDS-HUMAN` rules.
 - **Open-a-PR bridge.** `templates/pr-bridge.yml` — a token-substituted workflow for
   routines that OPEN a fresh PR from their branch (dep-update, e2e-coverage, and the

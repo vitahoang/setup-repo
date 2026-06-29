@@ -46,7 +46,10 @@ A Claude Code plugin of repo-setup automations.
 
 These routine skills share a common pattern (Claude routine → `claude/` branch →
 Actions bridge → PR), documented in
-[`skills/_shared/routine-skeleton.md`](skills/_shared/routine-skeleton.md).
+[`skills/_shared/routine-skeleton.md`](skills/_shared/routine-skeleton.md). The four
+cron-fired routines (dependency-update, docs-sync, flaky-test, e2e-coverage) are
+auto-provisioned via `/schedule` (a recurring cloud routine); auto-merge-pr and
+security-triage stay on the GitHub PR-event trigger.
 
 `repo-bootstrap` is the exception — a one-shot scaffolder (not a routine) that sets up the
 foundation the routines assume:

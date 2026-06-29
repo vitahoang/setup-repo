@@ -72,12 +72,17 @@ issue. This keeps a one-off fluke from masking a real intermittent bug.
    into `.github/workflows/`, and `templates/flaky_parse.py` into `.github/`. Edit the
    collector's `TEST_WORKFLOW`, `ARTIFACT_NAME`, and `WINDOW_DAYS` env values for your
    repo. Commit on the **default branch**.
-2. **Create the routine** in Claude Code on the web. Paste
-   `../_shared/templates/routine-prompt.preamble.md` first, then the full text of
-   `templates/routine-prompt.md`. Bind it to the target repo and grant at least
-   `Bash, Read, Write, Edit, Glob, Grep`.
-3. **Set schedules.** The collector runs daily by default; set the routine to run
-   **weekly** so it acts on an established digest.
+2. **Provision the routine with `/schedule`.** Assemble the prompt: the shared preamble
+   (`../_shared/templates/routine-prompt.preamble.md`) followed by the full text of
+   `templates/routine-prompt.md`. Invoke **`/schedule`** to create a **recurring cloud
+   routine** bound to the target repo that runs that prompt on a weekly cron — a sensible
+   default is `52 7 * * 4` (Thu ~07:52 local) — with tools
+   `Bash, Read, Write, Edit, Glob, Grep`. The collector workflow you copied in step 1
+   runs on its own daily Actions cron; only the routine is provisioned here.
+
+   *Manual fallback:* if `/schedule` can't bind the repo in your environment, create the
+   routine in Claude Code on the web instead — paste the same preamble + prompt, bind it
+   to the repo, grant the same tools, and set the same weekly cron.
 
 ## How to verify it works
 
